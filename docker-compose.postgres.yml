@@ -1,0 +1,68 @@
+version: '3.9'
+
+services:
+  postgres-primary:
+    image: bitnami/postgresql:latest
+    container_name: rock-postgres-primary
+    env_file:
+      - .env.postgres
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_REPLICATION_USER: ${POSTGRES_REPLICATION_USER:-repl_user}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-repl_password}
+      POSTGRESQL_USERNAME: ${POSTGRES_USERNAME:-rock}
+      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:-rock}
+      POSTGRESQL_DATABASE: ${POSTGRES_DATABASE:-rock}
+      POSTGRESQL_LOG_HOSTNAME: 'true'
+      POSTGRESQL_PORT_NUMBER: ${POSTGRES_PORT_NUMBER:-5432}
+      POSTGRESQL_ALLOW_REMOTE_CONNECTIONS: ${POSTGRES_ALLOW_REMOTE_CONNECTIONS:-yes}
+    ports:
+      - '${POSTGRES_PRIMARY_PORT:-5432}:5432'
+    volumes:
+      - postgres-primary-data:/bitnami/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USERNAME:-rock} -h localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - postgres-net
+
+  postgres-replica:
+    image: bitnami/postgresql:latest
+    container_name: rock-postgres-replica
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    env_file:
+      - .env.postgres
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_MASTER_HOST: ${POSTGRES_MASTER_HOST:-postgres-primary}
+      POSTGRESQL_MASTER_PORT_NUMBER: ${POSTGRES_MASTER_PORT_NUMBER:-5432}
+      POSTGRESQL_REPLICATION_USER: ${POSTGRES_REPLICATION_USER:-repl_user}
+      POSTGRESQL_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-repl_password}
+      POSTGRESQL_USERNAME: ${POSTGRES_USERNAME:-rock}
+      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:-rock}
+      POSTGRESQL_DATABASE: ${POSTGRES_DATABASE:-rock}
+      POSTGRESQL_PORT_NUMBER: ${POSTGRES_PORT_NUMBER:-5432}
+      POSTGRESQL_ALLOW_REMOTE_CONNECTIONS: ${POSTGRES_ALLOW_REMOTE_CONNECTIONS:-yes}
+    ports:
+      - '${POSTGRES_REPLICA_PORT:-5433}:5432'
+    volumes:
+      - postgres-replica-data:/bitnami/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USERNAME:-rock} -h localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - postgres-net
+
+networks:
+  postgres-net:
+    driver: bridge
+
+volumes:
+  postgres-primary-data:
+  postgres-replica-data:
