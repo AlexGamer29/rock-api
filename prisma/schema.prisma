@@ -1,0 +1,80 @@
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Song {
+  id                  BigInt    @id @default(autoincrement())
+  artlistSongId       String?   @unique
+  name                String?
+  nameForUrl          String?
+  assetTypeId         Int?
+  sitePlayableUrl     String?
+  lyrics              String?
+  numberOfStems       Int?
+  officialReleaseDate DateTime?
+  bpmRate             Int?
+  durationLabel       String?
+  durationSeconds     Int?
+  albumIdExt          String?
+  albumName           String?
+  albumNameForUrl     String?
+  albumThumbFilePath  String?
+  albumImageFilePath  String?
+  artistIdPrimary     String?
+  artistNamePrimary   String?
+  artistUrlPrimary    String?
+  primaryArtistsJson  Json?
+  featuredArtistsJson Json?
+  fetchedAt           DateTime  @default(now()) @db.Timestamptz
+  createdAt           DateTime  @default(now()) @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @db.Timestamptz
+
+  categories SongCategory[]
+
+  @@map("song")
+}
+
+model Category {
+  id            BigInt   @id @default(autoincrement())
+  categoryIdExt BigInt?
+  name          String?
+  parentName    String?
+  tagsJson      Json?
+  collectedFrom String?
+  firstSeenAt   DateTime @default(now()) @db.Timestamptz
+  lastSeenAt    DateTime @default(now()) @db.Timestamptz
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
+
+  songs SongCategory[]
+
+  @@unique([categoryIdExt, parentName])
+
+  @@map("category")
+}
+
+model SongCategory {
+  id         BigInt   @id @default(autoincrement())
+  songId     BigInt
+  categoryId BigInt
+  source     String?
+  fetchedAt  DateTime @default(now()) @db.Timestamptz
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  song     Song     @relation(fields: [songId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@index([songId])
+  @@index([categoryId])
+
+  @@map("song_category")
+}
